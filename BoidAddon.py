@@ -43,6 +43,24 @@ class TestOperator(bpy.types.Operator):
         return {'FINISHED'}
 
 
+class SelectBoidsOperator(bpy.types.Operator):
+    bl_idname = "object.select_boids"
+    bl_label = "Select Boids"
+    
+    @classmethod
+    def poll(cls, context):
+        obj = context.active_object
+        return (obj is not None and obj.type == 'MESH')
+
+    def execute(self, context):
+        #Deselect all first
+        bpy.ops.object.select_all(action='DESELECT')
+        boids = BoidDataCore.boids
+        for boid in boids:
+            boid.select = True
+        return {'FINISHED'}
+
+
 class BoidDataCore():
     boids = []
     
@@ -88,12 +106,16 @@ class BoidUIPanel(bpy.types.Panel):
         row = layout.row()
         row.operator(TestOperator.bl_idname)
 
+        row = layout.row()
+        row.operator(SelectBoidsOperator.bl_idname)
+
 
 def register():
     bpy.utils.register_class(BoidUIPanel)
     bpy.utils.register_class(RegisterBoidOperator)
     bpy.utils.register_class(UnregisterBoidOperator)
     bpy.utils.register_class(TestOperator)
+    bpy.utils.register_class(SelectBoidsOperator)
 
 
 def unregister():
@@ -101,6 +123,7 @@ def unregister():
     bpy.utils.unregister_class(RegisterBoidOperator)
     bpy.utils.unregister_class(UnregisterBoidOperator)
     bpy.utils.unregister_class(TestOperator)
+    bpy.utils.unregister_class(SelectBoidsOperator)
 
 
 if __name__ == "__main__":
