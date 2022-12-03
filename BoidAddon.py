@@ -1,6 +1,42 @@
 from abc import abstractmethod
 import operator
 import bpy
+import numpy as np
+
+class Boid:
+    def __init__(self, instance) -> None:
+        self.instance = instance
+        self.last_pos = (0,0,0)
+        self.velocity = (0,1,0)
+        self.max_speed = 1
+        self.max_force = 0.1
+    
+    def move(self):
+        self.last_pos = tuple(self.instance.location)
+        self.instance.location = add_tuples(self.instance.location, self.velocity)
+    
+    def apply_steering_force(self, desired):
+        des_limted = limit_vector(desired, self.max_speed)
+        steer_v = subtract_tuples(des_limted, self.velocity)
+        steer_f = limit_vector(steer_v, self.max_force)
+        self.velocity = limit_vector(add_tuples(self.velocity, steer_f), self.max_speed)
+    
+    def calc_velocity(self):
+        """
+        Call all rule functions
+        """
+        self.apply_steering_force((1, 0, 0))
+    
+    def add_keyframe(self, frame):
+        self.instance.keyframe_insert(data_path="location", frame=frame)
+    
+    def update(self, boids, frame):
+        self.add_keyframe(frame)
+        self.calc_velocity()
+        self.move()
+    
+    def delete_keyframes(self):
+        self.instance.animation_data_clear()
 
 ### Helper Functions ###
 def add_tuples(a, b):
@@ -8,6 +44,40 @@ def add_tuples(a, b):
     Add two tuples a and b, and return the result
     """
     return tuple(map(operator.add, a, b))
+
+def subtract_tuples(a, b):
+    """
+    Subtract two tuples, a - b
+    """
+    return tuple(map(operator.sub, a, b))
+
+def multiply_tuple_with_number(t, n):
+    """
+    Make scalar multiplication of tuple t and number n
+    """
+    return tuple([c * n for c in t])
+
+def normalize_vector(v):
+    """
+    Make vector normalization for a vector v
+    """
+    if all(c == 0 for c in v):
+        return v
+    return v / calc_v_len(v)
+
+def calc_v_len(v):
+    """
+    Returns the magnitude of a vector v
+    """
+    return np.sqrt(sum([c**2 for c in v]))
+
+def limit_vector(v, limit):
+    """
+    Limits the vector v to a magnitude [limit] if its magnitude is greater than limit
+    """
+    if calc_v_len(v) <= limit:
+        return v
+    return multiply_tuple_with_number(normalize_vector(v), limit)
 
 ### Generic Operator ###
 class GenericOperator(bpy.types.Operator):
@@ -92,23 +162,23 @@ class BoidDataCore():
     
     def removeBoids(boids):
         for boid in boids:
-            if BoidDataCore.boids.count(boid) > 0:
-                BoidDataCore.boids.remove(boid)
+            b = Boid(boid)
+            if BoidDataCore.boids.count(b) > 0:
+                BoidDataCore.boids.remove(b)
     
     def addBoids(boids):
         for boid in boids:
-            if BoidDataCore.boids.count(boid) < 1:
-                BoidDataCore.boids.append(boid)
-    
-    def setBoids(boids):
-        BoidDataCore.boids = boids 
+            b = Boid(boid)
+            if BoidDataCore.boids.count(b) < 1:
+                BoidDataCore.boids.append(b)
     
     def animateBoids(_b):
         scene = bpy.data.scenes["Scene"]
-        for frame in range(scene.frame_start, scene.frame_end):
+        for boid in BoidDataCore.boids:
+            boid.delete_keyframes()
+        for frame in range(scene.frame_start, scene.frame_end + 1):
             for boid in BoidDataCore.boids:
-                boid.keyframe_insert(data_path="location", frame=frame)
-                boid.location = add_tuples(boid.location, (0, 0.1, 0))
+                boid.update(BoidDataCore.boids, frame)
 
     @abstractmethod
     def generic_method():
