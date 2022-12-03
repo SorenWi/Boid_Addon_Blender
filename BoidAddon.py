@@ -10,6 +10,7 @@ class Boid:
         self.velocity = (0,1,0)
         self.max_speed = 1
         self.max_force = 0.1
+        self.vision_radius = 10
     
     def move(self):
         self.last_pos = tuple(self.instance.location)
@@ -29,8 +30,16 @@ class Boid:
     
     def add_keyframe(self, frame):
         self.instance.keyframe_insert(data_path="location", frame=frame)
+
+    def calc_boids_in_range(self, all_boids):
+        self.boids_in_range = []
+        for boid in all_boids:
+            distance = calc_v_len(boid.instance.location - self.instance.location)
+            if (distance <= self.vision_radius and boid != self):
+                self.boids_in_range.append(boid)
     
-    def update(self, boids, frame):
+    def update(self, all_boids, frame):
+        self.calc_boids_in_range(all_boids)
         self.add_keyframe(frame)
         self.calc_velocity()
         self.move()
@@ -147,7 +156,7 @@ class SelectBoidsOperator(GenericOperator):
         bpy.ops.object.select_all(action='DESELECT')
         boids = BoidDataCore.boids
         for boid in boids:
-            boid.select_set(True)
+            boid.instance.select_set(True)
         return {'FINISHED'}
 
 
