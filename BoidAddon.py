@@ -1,5 +1,13 @@
 from abc import abstractmethod
+import operator
 import bpy
+
+### Helper Functions ###
+def add_tuples(a, b):
+    """
+    Add two tuples a and b, and return the result
+    """
+    return tuple(map(operator.add, a, b))
 
 ### Generic Operator ###
 class GenericOperator(bpy.types.Operator):
@@ -28,7 +36,7 @@ class AnimateBoidOperator(GenericOperator):
     bl_label = "Animate Boids"
 
     def __init__(self):
-        super().__init__(BoidDataCore.addBoids)
+        super().__init__(BoidDataCore.animateBoids)
 
 class RegisterBoidOperator(GenericOperator):
     bl_idname = "object.register_boid"
@@ -95,6 +103,13 @@ class BoidDataCore():
     def setBoids(boids):
         BoidDataCore.boids = boids 
     
+    def animateBoids(_b):
+        scene = bpy.data.scenes["Scene"]
+        for frame in range(scene.frame_start, scene.frame_end):
+            for boid in BoidDataCore.boids:
+                boid.keyframe_insert(data_path="location", frame=frame)
+                boid.location = add_tuples(boid.location, (0, 0.1, 0))
+
     @abstractmethod
     def generic_method():
         pass
