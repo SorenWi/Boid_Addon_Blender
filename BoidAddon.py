@@ -1,63 +1,83 @@
+from abc import abstractmethod
+import operator
 import bpy
 
-class RegisterBoidOperator(bpy.types.Operator):
+### Helper Functions ###
+def add_tuples(a, b):
+    """
+    Add two tuples a and b, and return the result
+    """
+    return tuple(map(operator.add, a, b))
+
+### Generic Operator ###
+class GenericOperator(bpy.types.Operator):
+    """
+    Generic Operator to be used as a base for other operators.
+    """
+    bl_idname = "object.generic_operator"
+    bl_label = "Generic Label"
+
+    def __init__(self, method):
+        self.method = method
+    
+    @classmethod
+    def poll(cls, context):
+        obj = context.active_object
+        return (obj is not None and obj.type == 'MESH')
+
+    def execute(self, context):
+        self.method(bpy.context.selected_objects)
+        return {'FINISHED'}
+
+
+### Related Operators ###
+class AnimateBoidOperator(GenericOperator):
+    bl_idname = "object.animate_boids"
+    bl_label = "Animate Boids"
+
+    def __init__(self):
+        super().__init__(BoidDataCore.animateBoids)
+
+class RegisterBoidOperator(GenericOperator):
     bl_idname = "object.register_boid"
     bl_label = "Register"
-    
-    @classmethod
-    def poll(cls, context):
-        obj = context.active_object
-        return (obj is not None and obj.type == 'MESH')
 
-    def execute(self, context):
-        BoidDataCore.addBoids(bpy.context.selected_objects)
-        return {'FINISHED'}
+    def __init__(self):
+        super().__init__(BoidDataCore.addBoids)
 
-
-class UnregisterBoidOperator(bpy.types.Operator):
+class UnregisterBoidOperator(GenericOperator):
     bl_idname = "object.unregister_boid"
     bl_label = "Unregister"
-    
-    @classmethod
-    def poll(cls, context):
-        obj = context.active_object
-        return (obj is not None and obj.type == 'MESH')
 
-    def execute(self, context):
-        BoidDataCore.removeBoids(bpy.context.selected_objects)
-        
-        return {'FINISHED'}
+    def __init__(self):
+        super().__init__(BoidDataCore.removeBoids)
   
     
-class TestOperator(bpy.types.Operator):
+class TestOperator(GenericOperator):
     bl_idname = "object.test_boid"
     bl_label = "Test"
-    
-    @classmethod
-    def poll(cls, context):
-        obj = context.active_object
-        return (obj is not None and obj.type == 'MESH')
+
+    def __init__(self):
+        super().__init__(BoidDataCore.generic_method)
 
     def execute(self, context):
         print(BoidDataCore.getBoids())
         return {'FINISHED'}
 
 
-class SelectBoidsOperator(bpy.types.Operator):
+class SelectBoidsOperator(GenericOperator):
     bl_idname = "object.select_boids"
     bl_label = "Select Boids"
-    
-    @classmethod
-    def poll(cls, context):
-        obj = context.active_object
-        return (obj is not None and obj.type == 'MESH')
+
+    def __init__(self):
+        super().__init__(BoidDataCore.generic_method)
 
     def execute(self, context):
         #Deselect all first
         bpy.ops.object.select_all(action='DESELECT')
         boids = BoidDataCore.boids
         for boid in boids:
-            boid.select = True
+            boid.select_set(True)
         return {'FINISHED'}
 
 
@@ -82,8 +102,20 @@ class BoidDataCore():
     
     def setBoids(boids):
         BoidDataCore.boids = boids 
+    
+    def animateBoids(_b):
+        scene = bpy.data.scenes["Scene"]
+        for frame in range(scene.frame_start, scene.frame_end):
+            for boid in BoidDataCore.boids:
+                boid.keyframe_insert(data_path="location", frame=frame)
+                boid.location = add_tuples(boid.location, (0, 0.1, 0))
+
+    @abstractmethod
+    def generic_method():
+        pass
             
 
+operators = [RegisterBoidOperator, UnregisterBoidOperator, TestOperator, SelectBoidsOperator, AnimateBoidOperator]
 class BoidUIPanel(bpy.types.Panel):
     bl_label = "Boids"
     bl_idname = "VIEW3D_PT_Boids"
@@ -96,34 +128,23 @@ class BoidUIPanel(bpy.types.Panel):
         
         row = layout.row()
         row.label(text="Operators")
-        
-        row = layout.row()
-        row.operator(RegisterBoidOperator.bl_idname)
-        
-        row = layout.row()
-        row.operator(UnregisterBoidOperator.bl_idname)
-        
-        row = layout.row()
-        row.operator(TestOperator.bl_idname)
 
-        row = layout.row()
-        row.operator(SelectBoidsOperator.bl_idname)
+        for op in operators:
+            row = layout.row()
+            row.operator(op.bl_idname)
+
 
 
 def register():
     bpy.utils.register_class(BoidUIPanel)
-    bpy.utils.register_class(RegisterBoidOperator)
-    bpy.utils.register_class(UnregisterBoidOperator)
-    bpy.utils.register_class(TestOperator)
-    bpy.utils.register_class(SelectBoidsOperator)
+    for op in operators:
+        bpy.utils.register_class(op)
 
 
 def unregister():
     bpy.utils.unregister_class(BoidUIPanel)
-    bpy.utils.unregister_class(RegisterBoidOperator)
-    bpy.utils.unregister_class(UnregisterBoidOperator)
-    bpy.utils.unregister_class(TestOperator)
-    bpy.utils.unregister_class(SelectBoidsOperator)
+    for op in operators:
+        bpy.utils.register_class(op)
 
 
 if __name__ == "__main__":
