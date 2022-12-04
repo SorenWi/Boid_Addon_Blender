@@ -2,6 +2,7 @@ from abc import abstractmethod
 import operator
 import bpy
 import numpy as np
+import mathutils
 
 class Boid:
     def __init__(self, instance) -> None:
@@ -11,15 +12,20 @@ class Boid:
         self.max_speed = 1
         self.max_force = 0.1
         self.vision_radius = 10
-        self.cohesion_strength = 1
-        self.alignment_strength = 1
-        self.separation_strength = 2
-        self.separation_range = 4
+        self.cohesion_strength = 0.8
+        self.alignment_strength = 0.8
+        self.separation_strength = 1
 
     def move(self):
         self.last_pos = tuple(self.instance.location)
         self.instance.location = add_tuples(self.instance.location, self.velocity)
     
+    def rotate(self):
+        v = self.velocity
+        directionVector = mathutils.Vector(v)
+        self.instance.rotation_mode = "XYZ"
+        self.instance.rotation_euler = directionVector.to_track_quat('X', 'Z').to_euler()
+
     def get_steering_force(self, desired):
         steer = set_vector_magnitude(desired, self.max_speed)
         steer = subtract_tuples(steer, self.velocity)
@@ -43,9 +49,12 @@ class Boid:
         self.velocity = add_tuples(alignment, self.velocity)
         self.velocity = add_tuples(separation, self.velocity)
 
+        self.velocity = set_vector_magnitude(self.velocity, self.max_speed)
+
     
     def add_keyframe(self, frame):
         self.instance.keyframe_insert(data_path="location", frame=frame)
+        self.instance.keyframe_insert(data_path="rotation_euler", frame=frame)
 
     def calc_boids_in_range(self, all_boids):
         self.boids_in_range = []
@@ -81,6 +90,7 @@ class Boid:
         self.add_keyframe(frame)
         self.calc_velocity()
         self.move()
+        self.rotate()
     
     def delete_keyframes(self):
         self.instance.animation_data_clear()
