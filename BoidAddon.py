@@ -151,6 +151,9 @@ def limit_vector(v, limit):
     return multiply_tuple_with_number(normalize_vector(v), limit)
 
 def average_of_tuples(t_list):
+    """
+    Calculates the average tuple from a list of tuples t_list
+    """
     if len(t_list) == 0:
         return (0, 0, 0)
     return tuple([sum(sub_list) / len(sub_list) for sub_list in zip(*t_list)])
