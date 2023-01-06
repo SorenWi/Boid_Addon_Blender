@@ -9,12 +9,6 @@ class Boid:
         self.instance = instance
         self.last_pos = (0,0,0)
         self.velocity = (0,0,0)
-        self.max_speed = 1
-        self.max_force = 0.1
-        self.vision_radius = 10
-        self.cohesion_strength = 0.8
-        self.alignment_strength = 0.8
-        self.separation_strength = 1
 
     def move(self):
         self.last_pos = tuple(self.instance.location)
@@ -26,14 +20,14 @@ class Boid:
         self.instance.rotation_mode = "XYZ"
         self.instance.rotation_euler = directionVector.to_track_quat('X', 'Z').to_euler()
 
-    def get_steering_force(self, desired):
-        steer = set_vector_magnitude(desired, self.max_speed)
+    def get_steering_force(self, desired, settings):
+        steer = set_vector_magnitude(desired, settings.max_speed)
         steer = subtract_tuples(steer, self.velocity)
-        steer = limit_vector(steer, self.max_force)
+        steer = limit_vector(steer, settings.max_force)
 
         return steer
     
-    def calc_velocity(self):
+    def calc_velocity(self, settings):
         """
         Call all rule functions
         """
@@ -41,59 +35,68 @@ class Boid:
         if len(self.boids_in_range) == 0:
             return
 
-        cohesion = self.cohesion()
-        alignment = self.alignment()
-        separation = self.separation()
+        cohesion = self.cohesion(settings)
+        alignment = self.alignment(settings)
+        separation = self.separation(settings)
 
         self.velocity = add_tuples(cohesion, self.velocity)
         self.velocity = add_tuples(alignment, self.velocity)
         self.velocity = add_tuples(separation, self.velocity)
 
-        self.velocity = set_vector_magnitude(self.velocity, self.max_speed)
+        self.velocity = set_vector_magnitude(self.velocity, settings.max_speed)
 
     
     def add_keyframe(self, frame):
         self.instance.keyframe_insert(data_path="location", frame=frame)
         self.instance.keyframe_insert(data_path="rotation_euler", frame=frame)
 
-    def calc_boids_in_range(self, all_boids):
+    def calc_boids_in_range(self, all_boids, settings):
         self.boids_in_range = []
         for boid in all_boids:
             distance = calc_v_len(boid.instance.location - self.instance.location)
-            if (distance <= self.vision_radius and boid != self):
+            if (distance <= settings.vision_radius and boid != self):
                 self.boids_in_range.append(boid)
     
-    def cohesion(self):
+    def cohesion(self, settings):
         average_location = average_of_tuples([boid.instance.location for boid in self.boids_in_range])
-        cohesion_steer = self.get_steering_force(subtract_tuples(average_location, self.instance.location))
-        cohesion_steer = multiply_tuple_with_number(cohesion_steer, self.cohesion_strength)
+        cohesion_steer = self.get_steering_force(subtract_tuples(average_location, self.instance.location), settings)
+        cohesion_steer = multiply_tuple_with_number(cohesion_steer, settings.cohesion_strength)
 
         return cohesion_steer
 
-    def alignment(self):
+    def alignment(self, settings):
         average_velocity = average_of_tuples([boid.velocity for boid in self.boids_in_range])
-        alignment_steer = self.get_steering_force(average_velocity)
-        alignment_steer = multiply_tuple_with_number(alignment_steer, self.alignment_strength)
+        alignment_steer = self.get_steering_force(average_velocity, settings)
+        alignment_steer = multiply_tuple_with_number(alignment_steer, settings.alignment_strength)
 
         return alignment_steer
 
-    def separation(self):     
+    def separation(self, settings):     
         average_separation = average_of_tuples([subtract_tuples(self.instance.location, boid.instance.location) for boid in self.boids_in_range])
-        separation_steer = self.get_steering_force(average_separation)
-        separation_steer = multiply_tuple_with_number(separation_steer, self.separation_strength)
+        separation_steer = self.get_steering_force(average_separation, settings)
+        separation_steer = multiply_tuple_with_number(separation_steer, settings.separation_strength)
 
         return separation_steer
 
     
-    def update(self, all_boids, frame):
-        self.calc_boids_in_range(all_boids)
+    def update(self, all_boids, frame, settings):
+        self.calc_boids_in_range(all_boids, settings)
         self.add_keyframe(frame)
-        self.calc_velocity()
+        self.calc_velocity(settings)
         self.move()
         self.rotate()
     
     def delete_keyframes(self):
         self.instance.animation_data_clear()
+
+class BoidSettingValues(bpy.types.PropertyGroup):
+    max_speed: bpy.props.FloatProperty(name = "Max Speed", description="Sets the Max Speed", min=0, step=0.01, default=1)
+    max_force: bpy.props.FloatProperty(name = "Max Force", description="Sets the Max Force", min=0, step=0.01, default=0.1)
+    vision_radius: bpy.props.FloatProperty(name = "Vision Radius", description="Sets the Vision Radius", min=0, step=0.01, default=10)
+    cohesion_strength: bpy.props.FloatProperty(name = "Cohesion Strength", description="Sets the Cohesion Strength", min=0, step=0.01, max=1, default=1)
+    alignment_strength: bpy.props.FloatProperty(name = "Alignment Strength", description="Sets the Alignment Strength", min=0, step=0.01, max=1, default=1)
+    separation_strength: bpy.props.FloatProperty(name = "Separation Strength", description="Sets the Separation Strength", min=0, step=0.01, max=1, default=0.9)
+
 
 ### Helper Functions ###
 def add_tuples(a, b):
@@ -253,11 +256,12 @@ class BoidDataCore():
     
     def animateBoids(_b):
         scene = bpy.data.scenes["Scene"]
+        settings = bpy.context.scene.boid_settings
         for boid in BoidDataCore.boids:
             boid.delete_keyframes()
         for frame in range(scene.frame_start, scene.frame_end + 1):
             for boid in BoidDataCore.boids:
-                boid.update(BoidDataCore.boids, frame)
+                boid.update(BoidDataCore.boids, frame, settings)
 
     @abstractmethod
     def generic_method():
@@ -272,6 +276,7 @@ class BoidUIPanel(bpy.types.Panel):
     bl_region_type = 'UI'
     bl_category = "Boids"
     
+    
     def draw(self, context):
         layout = self.layout
         
@@ -281,17 +286,35 @@ class BoidUIPanel(bpy.types.Panel):
         for op in operators:
             row = layout.row()
             row.operator(op.bl_idname)
+        
+        row = layout.row()
+        row.prop(data=context.scene.boid_settings, property="max_speed")
+        row = layout.row()
+        row.prop(data=context.scene.boid_settings, property="max_force")
+        row = layout.row()
+        row.prop(data=context.scene.boid_settings, property="vision_radius")
+        row = layout.row()
+        row.prop(data=context.scene.boid_settings, property="cohesion_strength")
+        row = layout.row()
+        row.prop(data=context.scene.boid_settings, property="alignment_strength")
+        row = layout.row()
+        row.prop(data=context.scene.boid_settings, property="separation_strength")
+        row = layout.row()
 
 
 
 def register():
+    bpy.utils.register_class(BoidSettingValues)
+    bpy.types.Scene.boid_settings = bpy.props.PointerProperty(type=BoidSettingValues)
     bpy.utils.register_class(BoidUIPanel)
     for op in operators:
         bpy.utils.register_class(op)
+    
 
 
 def unregister():
     bpy.utils.unregister_class(BoidUIPanel)
+    bpy.utils.unregister_class(BoidSettingValues)
     for op in operators:
         bpy.utils.register_class(op)
 
