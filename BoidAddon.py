@@ -4,7 +4,6 @@ import bpy
 import numpy as np
 import mathutils
 
-from pprint import pprint
 class Boid:
     def __init__(self, instance) -> None:
         self.instance = instance
@@ -257,11 +256,11 @@ class BoidDataCore():
     
     def animateBoids(_b):
         scene = bpy.data.scenes["Scene"]
+        settings = bpy.context.scene.boid_settings
         for boid in BoidDataCore.boids:
             boid.delete_keyframes()
         for frame in range(scene.frame_start, scene.frame_end + 1):
             for boid in BoidDataCore.boids:
-                settings = bpy.context.scene.boid_settings
                 boid.update(BoidDataCore.boids, frame, settings)
 
     @abstractmethod
@@ -314,8 +313,8 @@ def register():
 
 
 def unregister():
-    bpy.utils.register_class(BoidSettingValues)
     bpy.utils.unregister_class(BoidUIPanel)
+    bpy.utils.unregister_class(BoidSettingValues)
     for op in operators:
         bpy.utils.register_class(op)
 
