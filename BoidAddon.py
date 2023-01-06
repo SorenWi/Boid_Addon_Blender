@@ -320,4 +320,8 @@ def unregister():
 
 
 if __name__ == "__main__":
+    try:
+        unregister()
+    except:
+        pass
     register()
