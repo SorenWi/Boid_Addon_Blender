@@ -53,7 +53,7 @@ class Boid:
     def calc_boids_in_range(self, all_boids, settings):
         self.boids_in_range = []
         for boid in all_boids:
-            distance = calc_v_len(boid.last_pos - self.instance.location)
+            distance = calc_v_len(subtract_tuples(boid.last_pos, tuple(self.instance.location)))
             if (distance <= settings.vision_radius and boid != self):
                 self.boids_in_range.append(boid)
     
@@ -248,13 +248,13 @@ class BoidDataCore():
         return BoidDataCore._boids
     
     def removeBoids(boids):
-        BoidDataCore._boids = [boid for boid in BoidDataCore._boids if boid.instance not in boids ]
+        BoidDataCore._boids = [boid for boid in BoidDataCore.getBoids() if boid.instance not in boids ]
         
     
     def addBoids(boids):
         for boid in boids:
             b = Boid(boid)
-            if BoidDataCore._boids.count(b) < 1:
+            if BoidDataCore.getBoids().count(b) < 1:
                 BoidDataCore._boids.append(b)
     
     def animateBoids(_b):
@@ -264,7 +264,7 @@ class BoidDataCore():
             boid.delete_keyframes()
         for frame in range(scene.frame_start, scene.frame_end + 1):
             for boid in BoidDataCore.getBoids():
-                boid.update(BoidDataCore._boids, frame, settings)
+                boid.update(BoidDataCore.getBoids(), frame, settings)
 
     @abstractmethod
     def generic_method():
