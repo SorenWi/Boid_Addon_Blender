@@ -7,7 +7,7 @@ import mathutils
 class Boid:
     def __init__(self, instance) -> None:
         self.instance = instance
-        self.last_pos = (0,0,0)
+        self.last_pos = tuple(self.instance.location)
         self.velocity = (0,0,0)
 
     def move(self):
@@ -53,12 +53,12 @@ class Boid:
     def calc_boids_in_range(self, all_boids, settings):
         self.boids_in_range = []
         for boid in all_boids:
-            distance = calc_v_len(boid.instance.location - self.instance.location)
+            distance = calc_v_len(boid.last_pos - self.instance.location)
             if (distance <= settings.vision_radius and boid != self):
                 self.boids_in_range.append(boid)
     
     def cohesion(self, settings):
-        average_location = average_of_tuples([boid.instance.location for boid in self.boids_in_range])
+        average_location = average_of_tuples([boid.last_pos for boid in self.boids_in_range])
         cohesion_steer = self.get_steering_force(subtract_tuples(average_location, self.instance.location), settings)
         cohesion_steer = multiply_tuple_with_number(cohesion_steer, settings.cohesion_strength)
 
@@ -72,7 +72,7 @@ class Boid:
         return alignment_steer
 
     def separation(self, settings):     
-        average_separation = average_of_tuples([subtract_tuples(self.instance.location, boid.instance.location) for boid in self.boids_in_range])
+        average_separation = average_of_tuples([subtract_tuples(self.instance.location, boid.last_pos) for boid in self.boids_in_range])
         separation_steer = self.get_steering_force(average_separation, settings)
         separation_steer = multiply_tuple_with_number(separation_steer, settings.separation_strength)
 
