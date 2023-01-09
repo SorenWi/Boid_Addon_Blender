@@ -188,21 +188,21 @@ class AnimateBoidOperator(GenericOperator):
     bl_label = "Animate Boids"
 
     def __init__(self):
-        super().__init__(BoidDataCore.animateBoids)
+        super().__init__(BoidDataCore.animate_boids)
 
 class RegisterBoidOperator(GenericOperator):
     bl_idname = "object.register_boid"
     bl_label = "Register"
 
     def __init__(self):
-        super().__init__(BoidDataCore.addBoids)
+        super().__init__(BoidDataCore.add_boids)
 
 class UnregisterBoidOperator(GenericOperator):
     bl_idname = "object.unregister_boid"
     bl_label = "Unregister"
 
     def __init__(self):
-        super().__init__(BoidDataCore.removeBoids)
+        super().__init__(BoidDataCore.remove_boids)
   
     
 class TestOperator(GenericOperator):
@@ -213,7 +213,7 @@ class TestOperator(GenericOperator):
         super().__init__(BoidDataCore.generic_method)
 
     def execute(self, context):
-        print(BoidDataCore.getBoids())
+        print(BoidDataCore.get_boids())
         return {'FINISHED'}
 
 
@@ -227,7 +227,7 @@ class SelectBoidsOperator(GenericOperator):
     def execute(self, context):
         #Deselect all first
         bpy.ops.object.select_all(action='DESELECT')
-        for boid in BoidDataCore.getBoids():
+        for boid in BoidDataCore.get_boids():
             boid.instance.select_set(True)
         return {'FINISHED'}
 
@@ -235,10 +235,10 @@ class SelectBoidsOperator(GenericOperator):
 class BoidDataCore():
     _boids = []
     
-    def loadData():
+    def load_data():
         print("loading")
     
-    def getBoids():
+    def get_boids():
         for boid in BoidDataCore._boids:
             try:
                 boid.instance.name
@@ -247,24 +247,24 @@ class BoidDataCore():
 
         return BoidDataCore._boids
     
-    def removeBoids(boids):
-        BoidDataCore._boids = [boid for boid in BoidDataCore.getBoids() if boid.instance not in boids ]
+    def remove_boids(boids):
+        BoidDataCore._boids = [boid for boid in BoidDataCore.get_boids() if boid.instance not in boids ]
         
     
-    def addBoids(boids):
+    def add_boids(boids):
         for boid in boids:
             b = Boid(boid)
-            if BoidDataCore.getBoids().count(b) < 1:
+            if BoidDataCore.get_boids().count(b) < 1:
                 BoidDataCore._boids.append(b)
     
-    def animateBoids(_b):
+    def animate_boids(_b):
         scene = bpy.data.scenes["Scene"]
         settings = bpy.context.scene.boid_settings
-        for boid in BoidDataCore.getBoids():
+        for boid in BoidDataCore.get_boids():
             boid.delete_keyframes()
         for frame in range(scene.frame_start, scene.frame_end + 1):
-            for boid in BoidDataCore.getBoids():
-                boid.update(BoidDataCore.getBoids(), frame, settings)
+            for boid in BoidDataCore.get_boids():
+                boid.update(BoidDataCore.get_boids(), frame, settings)
 
     @abstractmethod
     def generic_method():
