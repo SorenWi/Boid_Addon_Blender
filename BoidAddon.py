@@ -227,41 +227,44 @@ class SelectBoidsOperator(GenericOperator):
     def execute(self, context):
         #Deselect all first
         bpy.ops.object.select_all(action='DESELECT')
-        boids = BoidDataCore.boids
-        for boid in boids:
+        for boid in BoidDataCore.getBoids():
             boid.instance.select_set(True)
         return {'FINISHED'}
 
 
 class BoidDataCore():
-    boids = []
+    _boids = []
     
     def loadData():
         print("loading")
     
     def getBoids():
-        return BoidDataCore.boids
+        for boid in BoidDataCore._boids:
+            try:
+                boid.instance.name
+            except:
+                BoidDataCore._boids.remove(boid)
+
+        return BoidDataCore._boids
     
     def removeBoids(boids):
-        for boid in boids:
-            b = Boid(boid)
-            if BoidDataCore.boids.count(b) > 0:
-                BoidDataCore.boids.remove(b)
+        BoidDataCore._boids = [boid for boid in BoidDataCore._boids if boid.instance not in boids ]
+        
     
     def addBoids(boids):
         for boid in boids:
             b = Boid(boid)
-            if BoidDataCore.boids.count(b) < 1:
-                BoidDataCore.boids.append(b)
+            if BoidDataCore._boids.count(b) < 1:
+                BoidDataCore._boids.append(b)
     
     def animateBoids(_b):
         scene = bpy.data.scenes["Scene"]
         settings = bpy.context.scene.boid_settings
-        for boid in BoidDataCore.boids:
+        for boid in BoidDataCore.getBoids():
             boid.delete_keyframes()
         for frame in range(scene.frame_start, scene.frame_end + 1):
-            for boid in BoidDataCore.boids:
-                boid.update(BoidDataCore.boids, frame, settings)
+            for boid in BoidDataCore.getBoids():
+                boid.update(BoidDataCore._boids, frame, settings)
 
     @abstractmethod
     def generic_method():
