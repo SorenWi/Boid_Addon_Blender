@@ -7,7 +7,7 @@ import mathutils
 class Boid:
     def __init__(self, instance) -> None:
         self.instance = instance
-        self.last_pos = (0,0,0)
+        self.last_pos = tuple(self.instance.location)
         self.velocity = (0,0,0)
 
     def move(self):
@@ -53,12 +53,12 @@ class Boid:
     def calc_boids_in_range(self, all_boids, settings):
         self.boids_in_range = []
         for boid in all_boids:
-            distance = calc_v_len(boid.instance.location - self.instance.location)
+            distance = calc_v_len(subtract_tuples(boid.last_pos, tuple(self.instance.location)))
             if (distance <= settings.vision_radius and boid != self):
                 self.boids_in_range.append(boid)
     
     def cohesion(self, settings):
-        average_location = average_of_tuples([boid.instance.location for boid in self.boids_in_range])
+        average_location = average_of_tuples([boid.last_pos for boid in self.boids_in_range])
         cohesion_steer = self.get_steering_force(subtract_tuples(average_location, self.instance.location), settings)
         cohesion_steer = multiply_tuple_with_number(cohesion_steer, settings.cohesion_strength)
 
@@ -72,7 +72,7 @@ class Boid:
         return alignment_steer
 
     def separation(self, settings):     
-        average_separation = average_of_tuples([subtract_tuples(self.instance.location, boid.instance.location) for boid in self.boids_in_range])
+        average_separation = average_of_tuples([subtract_tuples(self.instance.location, boid.last_pos) for boid in self.boids_in_range])
         separation_steer = self.get_steering_force(average_separation, settings)
         separation_steer = multiply_tuple_with_number(separation_steer, settings.separation_strength)
 
@@ -188,21 +188,21 @@ class AnimateBoidOperator(GenericOperator):
     bl_label = "Animate Boids"
 
     def __init__(self):
-        super().__init__(BoidDataCore.animateBoids)
+        super().__init__(BoidDataCore.animate_boids)
 
 class RegisterBoidOperator(GenericOperator):
     bl_idname = "object.register_boid"
     bl_label = "Register"
 
     def __init__(self):
-        super().__init__(BoidDataCore.addBoids)
+        super().__init__(BoidDataCore.add_boids)
 
 class UnregisterBoidOperator(GenericOperator):
     bl_idname = "object.unregister_boid"
     bl_label = "Unregister"
 
     def __init__(self):
-        super().__init__(BoidDataCore.removeBoids)
+        super().__init__(BoidDataCore.remove_boids)
   
     
 class TestOperator(GenericOperator):
@@ -213,7 +213,7 @@ class TestOperator(GenericOperator):
         super().__init__(BoidDataCore.generic_method)
 
     def execute(self, context):
-        print(BoidDataCore.getBoids())
+        print(BoidDataCore.get_boids())
         return {'FINISHED'}
 
 
@@ -227,41 +227,44 @@ class SelectBoidsOperator(GenericOperator):
     def execute(self, context):
         #Deselect all first
         bpy.ops.object.select_all(action='DESELECT')
-        boids = BoidDataCore.boids
-        for boid in boids:
+        for boid in BoidDataCore.get_boids():
             boid.instance.select_set(True)
         return {'FINISHED'}
 
 
 class BoidDataCore():
-    boids = []
+    _boids = []
     
-    def loadData():
+    def load_data():
         print("loading")
     
-    def getBoids():
-        return BoidDataCore.boids
+    def get_boids():
+        for boid in BoidDataCore._boids:
+            try:
+                boid.instance.name
+            except:
+                BoidDataCore._boids.remove(boid)
+
+        return BoidDataCore._boids
     
-    def removeBoids(boids):
+    def remove_boids(boids):
+        BoidDataCore._boids = [boid for boid in BoidDataCore.get_boids() if boid.instance not in boids ]
+        
+    
+    def add_boids(boids):
         for boid in boids:
             b = Boid(boid)
-            if BoidDataCore.boids.count(b) > 0:
-                BoidDataCore.boids.remove(b)
+            if BoidDataCore.get_boids().count(b) < 1:
+                BoidDataCore._boids.append(b)
     
-    def addBoids(boids):
-        for boid in boids:
-            b = Boid(boid)
-            if BoidDataCore.boids.count(b) < 1:
-                BoidDataCore.boids.append(b)
-    
-    def animateBoids(_b):
+    def animate_boids(_b):
         scene = bpy.data.scenes["Scene"]
         settings = bpy.context.scene.boid_settings
-        for boid in BoidDataCore.boids:
+        for boid in BoidDataCore.get_boids():
             boid.delete_keyframes()
         for frame in range(scene.frame_start, scene.frame_end + 1):
-            for boid in BoidDataCore.boids:
-                boid.update(BoidDataCore.boids, frame, settings)
+            for boid in BoidDataCore.get_boids():
+                boid.update(BoidDataCore.get_boids(), frame, settings)
 
     @abstractmethod
     def generic_method():
