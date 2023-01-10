@@ -412,18 +412,14 @@ class BoidUIPanel(bpy.types.Panel):
             row.operator(op.bl_idname)
 
         row = layout.row()
-        row.prop(data=context.scene.boid_settings, property="max_speed")
-        row = layout.row()
-        row.prop(data=context.scene.boid_settings, property="max_force")
-        row = layout.row()
-        row.prop(data=context.scene.boid_settings, property="vision_radius")
-        row = layout.row()
-        row.prop(data=context.scene.boid_settings, property="cohesion_strength")
-        row = layout.row()
-        row.prop(data=context.scene.boid_settings, property="alignment_strength")
-        row = layout.row()
-        row.prop(data=context.scene.boid_settings, property="separation_strength")
-        row = layout.row()
+        row.label(text = "Boid Settings")
+
+        properties = ["max_speed", "max_force", "vision_radius", "cohesion_strength", "alignment_strength", "separation_strength"]
+        obj = context.scene.boid_settings 
+
+        for prop in properties:
+            row = layout.row()
+            row.prop(data = obj, property = prop)
 
 
 
