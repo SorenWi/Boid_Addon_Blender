@@ -2,7 +2,6 @@
 """
 A blender addon creating and animating boids
 """
-import operator
 import bpy # pylint: disable=import-error
 import numpy as np # pylint: disable=import-error
 import mathutils # pylint: disable=import-error
@@ -130,7 +129,7 @@ class Boid:
         """
         self.instance.animation_data_clear()
 
-class BoidSettingValues(bpy.types.PropertyGroup):
+class BoidSettingValues(bpy.types.PropertyGroup): # pylint: disable=too-few-public-methods
     """
     Defines all Properties needed for the boids
     """
@@ -165,19 +164,19 @@ def add_tuples(op1, op2):
     """
     Add two tuples a and b, and return the result
     """
-    return tuple(map(operator.add, op1, op2))
+    return tuple(op1[i] + op2[i] for i in range(len(op1)))
 
 def subtract_tuples(op1, op2):
     """
     Subtract two tuples, a - b
     """
-    return tuple(map(operator.sub, op1, op2))
+    return tuple(op1[i] - op2[i] for i in range(len(op1)))
 
 def multiply_tuple_with_number(tuple_in, number):
     """
     Make scalar multiplication of tuple t and number n
     """
-    return tuple([c * number for c in tuple_in])
+    return tuple(c * number for c in tuple_in)
 
 def divide_tuple_by_number(tuple_in, number):
     """
@@ -185,7 +184,7 @@ def divide_tuple_by_number(tuple_in, number):
     """
     if number == 0:
         return tuple_in
-    return tuple([c / number for c in tuple_in])
+    return tuple(c / number for c in tuple_in)
 
 def set_vector_magnitude(vec, mag):
     """
@@ -205,7 +204,7 @@ def calc_v_len(vec):
     """
     Returns the magnitude of a vector v
     """
-    return np.sqrt(sum([c**2 for c in vec]))
+    return np.sqrt(sum(list(c**2 for c in vec)))
 
 def limit_vector(vec, limit):
     """
@@ -221,7 +220,7 @@ def average_of_tuples(t_list):
     """
     if len(t_list) == 0:
         return (0, 0, 0)
-    return tuple([sum(sub_list) / len(sub_list) for sub_list in zip(*t_list)])
+    return tuple(sum(sub_list) / len(sub_list) for sub_list in zip(*t_list))
 
 ### Generic Operator ###
 class GenericOperator(bpy.types.Operator):
@@ -388,7 +387,7 @@ operators = [
     TestOperator,
     SelectBoidsOperator,
     AnimateBoidOperator]
-class BoidUIPanel(bpy.types.Panel):
+class BoidUIPanel(bpy.types.Panel): # pylint: disable=too-few-public-methods
     """
     Generates the UI for the addon
     """
