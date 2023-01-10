@@ -3,9 +3,18 @@
 A blender addon creating and animating boids
 """
 import operator
-import bpy # pylint: disable=import-error
-import numpy as np # pylint: disable=import-error
+from enum import Enum #  pylint: disable=import-error
 import mathutils # pylint: disable=import-error
+import numpy as np # pylint: disable=import-error
+import bpy # pylint: disable=import-error
+
+class BoidType(Enum):
+    """
+    Type of boid that determines how boid is handled
+    """
+    NORMAL = 0
+    PREY = 1
+    PREDATOR = 2
 
 class Boid:
     """
@@ -16,6 +25,19 @@ class Boid:
         self.last_pos = tuple(self.instance.location)
         self.velocity = (0,0,0)
         self.boids_in_range = []
+        self.type = BoidType.NORMAL
+
+    def set_type(self, boid_type):
+        """
+        Sets boid type
+        """
+        self.type = boid_type
+
+    def get_type(self):
+        """
+        Returns boid type
+        """
+        return self.type
 
     def move(self):
         """
@@ -414,8 +436,9 @@ class BoidUIPanel(bpy.types.Panel):
         row = layout.row()
         row.label(text = "Boid Settings")
 
-        properties = ["max_speed", "max_force", "vision_radius", "cohesion_strength", "alignment_strength", "separation_strength"]
-        obj = context.scene.boid_settings 
+        properties = ["max_speed", "max_force", "vision_radius", "cohesion_strength",
+                     "alignment_strength", "separation_strength"]
+        obj = context.scene.boid_settings
 
         for prop in properties:
             row = layout.row()
